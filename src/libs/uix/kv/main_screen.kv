@@ -1,0 +1,78 @@
+#:kivy 2.3.1
+
+<MainScreen>:
+    name: "main"
+    md_bg_color: self.theme_cls.backgroundColor
+
+    MDBoxLayout:
+        orientation: "vertical"
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        adaptive_height: True
+        spacing: dp(50)
+
+        MDBoxLayout:
+            orientation: "vertical"
+            adaptive_height: True
+            MDLabel:
+                text: "ZapFS"
+                bold: True
+                font_style: "Display"
+                role: "large"
+                halign: "center"
+
+        MDBoxLayout:
+            orientation: "vertical"
+            adaptive_height: True
+            MDLabel:
+                text: "Instant LAN File Sharing"
+                font_style: "Display"
+                bold: True
+                role: "small"
+                halign: "center"
+            MDLabel:
+                text: "What would you like to do?"
+                font_style: "Headline"
+                role: "small"
+                halign: "center"
+
+        MDBoxLayout:
+            adaptive_size: True
+            pos_hint: {"center_x": 0.5, "center_y": 0.5}
+            spacing: dp(50)
+
+            BigButton:
+                primary_text: "Send"
+                icon: "tray-arrow-up"
+                md_bg_color: root.theme_cls.secondaryContainerColor
+                on_release: app.change_root_screen("send")
+
+            BigButton:
+                primary_text: "Receive"
+                icon: "tray-arrow-down"
+                md_bg_color: root.theme_cls.secondaryContainerColor
+                on_release: app.change_root_screen("recv")
+
+
+<BigButton@MDCard>:
+    radius: 10
+    theme_bg_color: "Custom"
+    ripple_behaviour: True
+    padding: 10
+    size_hint: None, None
+    size: 300, 170
+    orientation: "vertical"
+    primary_text: ""
+    icon: ""
+
+    MDIcon:
+        icon: root.icon
+        theme_font_size: "Custom"
+        font_size: "64sp"
+        halign: "center"
+        pos_hint: {"center_x": 0.5}
+    MDLabel:
+        text: root.primary_text
+        font_style: "Headline"
+        role: "large"
+        halign: "center"
+        bold: True
