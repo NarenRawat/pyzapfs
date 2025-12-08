@@ -1,0 +1,55 @@
+#:kivy 2.3.1
+
+<RecvScreen>:
+    name: "recv"
+    md_bg_color: self.theme_cls.backgroundColor
+
+    MDIconButton:
+        icon: "arrow-left"
+        x: dp(10)
+        top: Window.height - dp(10)
+        on_release:
+            app.change_root_screen("main")
+
+    MDLabel:
+        text: "ZapFS"
+        bold: True
+        adaptive_height: True
+        halign: "center"
+        theme_font_size: "Custom"
+        font_size: sp(72)
+        top: self.parent.top - self.height * 0
+        text_color: self.theme_cls.onBackgroundColor
+
+    WaitingConnection:
+        id: conn
+        size_hint: None, None
+        size: dp(800), dp(800)
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+
+    MDLabel:
+        text: "Waiting for Sender"
+        pos_hint: {"center_x": 0.5}
+        y: conn.y + dp(50)
+        halign: "center"
+        font_style: "Headline"
+        role: "large"
+        adaptive_height: True
+        text_color: self.theme_cls.onBackgroundColor
+
+    MDIcon:
+        icon: "laptop"
+        pos_hint: {"center_x": 0.5, "center_y": 0.5}
+        text_color: self.theme_cls.onSecondaryColor
+
+        theme_font_size: "Custom"
+        font_size: sp(50)
+        halign: "center"
+
+        adaptive_size: True
+        width: self.texture_size[0]
+
+
+<WaitingConnection>:
+
+

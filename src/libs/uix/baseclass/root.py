@@ -4,6 +4,7 @@ from os import path
 from kivy.clock import Clock
 from kivymd.uix.screenmanager import MDScreenManager
 from importlib import import_module
+from screens import screens
 
 
 class Root(MDScreenManager):
@@ -12,9 +13,6 @@ class Root(MDScreenManager):
         Clock.schedule_once(self.add_screens)
 
     def add_screens(self, delta):
-        with open(path.join("json", "screen_data.json")) as file:
-            screens = json.load(file)
-
         for screen_name, screen_details in screens.items():
             module = import_module(screen_details.get("import"))
             screen_class = getattr(module, screen_details.get("class"))

@@ -1,6 +1,0 @@
-{
-    "main": {
-        "import": "libs.uix.baseclass.main_screen",
-        "class": "MainScreen"
-    }
-}
