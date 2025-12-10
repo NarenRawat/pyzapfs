@@ -52,7 +52,9 @@ class RecvScreen(MDScreen):
         try:
             sock, (addr, port) = self.transfer_sock.accept()
             self.sender_sock = sock
+            self.sender_sock.setblocking(False)
 
+            self.transfer_started = True
             self.manager.current = "transfer_recv"
             self.manager.current_screen.on_receive(sock, self.transfer_sock)
 

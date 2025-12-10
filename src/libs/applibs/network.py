@@ -1,4 +1,3 @@
-import time
 import socket
 
 def create_udp_broadcast_socket():

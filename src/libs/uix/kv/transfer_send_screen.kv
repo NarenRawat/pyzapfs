@@ -51,7 +51,7 @@
 
                     MDLabel:
                         adaptive_size: True
-                        text: str((root.overall_sent / root.overall_size * 100) if root.overall_size else 0) + "%"
+                        text: str(int(root.overall_sent / root.overall_size * 100) if root.overall_size else 0) + "%"
                         font_style: "Title"
                         pos_hint: {"center_y": 0.5}
 

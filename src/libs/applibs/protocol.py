@@ -18,16 +18,19 @@ TLV_OVERALL_SIZE = 6
 
 _header_format = "!5sBBBL"
 _tlv_header = "!BL"
-_filedata = "!L"
+_filedata = "!Q"
+
 
 def create_filedata(filename, size):
     return struct.pack(_filedata, size) + filename.encode()
 
+
 def parse_filedata(data):
     header_size = struct.calcsize(_filedata)
-    size = struct.unpack(_filedata, data[:header_size])
+    size = struct.unpack(_filedata, data[:header_size])[0]
 
-    return (size, data[header_size:].decode())
+    return (size, data[header_size :].decode())
+
 
 def get_tlv_header_size():
     return struct.calcsize(_tlv_header)
