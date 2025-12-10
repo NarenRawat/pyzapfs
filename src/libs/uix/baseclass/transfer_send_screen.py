@@ -33,14 +33,7 @@ class TransferSendScreen(MDScreen):
         self.transfer_sock.setblocking(False)
 
         for i, v in enumerate(files_rv.data):
-            file_packet = protocol.create_filedata(v.get("filename"), v.get("total_size"))
-            file_tlv = protocol.create_tlv(protocol.TLV_FILEDATA, len(file_packet), file_packet)
-            packet = protocol.build_packet(protocol.MSG_TRANSFER, file_tlv)
-
-            self.transfer_sock.sendall(packet)
-
             with open(v.get("filename"), "rb") as file:
-                # print(v.get("filename"))
                 byte_read = file.read(1024)
                 self.overall_sent += len(byte_read)
 
@@ -54,13 +47,18 @@ class TransferSendScreen(MDScreen):
                         self.transfer_sock.sendall(byte_read)
                         byte_read = file.read(1024)
                         self.overall_sent += len(byte_read)
+                        v["sent"] = v.get("sent") + len(byte_read)
+                        files_rv.data.pop(i)
+                        files_rv.data.insert(i, v)
                     except BlockingIOError as e:
                         continue
 
+        self.transfer_sock.close()
 
 
-    def on_receive(self, sever_ip, data):
-        self.server_ip = sever_ip
+
+    def on_receive(self, server_ip, data):
+        self.server_ip = server_ip
         self.filedata = data
 
         to_send = b""

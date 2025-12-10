@@ -27,73 +27,37 @@ class TransferRecvScreen(MDScreen):
 
     @multitasking.task
     def start_receiving(self):
-
-        # You already appended filename + size to RV in your on_receive()
         files_rv = self.ids["files_rv"]
+        os.makedirs("received", exist_ok=True)
 
-        total_data = b""
-        data = b""
-        
-        self.sender_sock.setblocking(False)
+        for i, entry in enumerate(files_rv.data):
+            filename = entry["filename"]
+            filesize = entry["total_size"]
 
-        while True:
-            try:
-                data = self.sender_sock.recv(1024)
-            except BlockingIOError as e:
-                continue
+            output_path = os.path.join("received", filename)
 
-            total_data += data
+            remaining = filesize
+            print(f"[+] Receiving: {filename}  ({remaining} bytes)")
 
-            # header_size , *_, length = protocol.parse_packet(data)
-            # tlvs = protocol.parse_tlvs(total_data[header_size:header_size + length])
-            # total_data = total_data[header_size + length:]
+            with open(output_path, "wb") as file:
+                while remaining > 0:
+                    try:
+                        chunk = self.sender_sock.recv(min(4096, remaining))
+                        if not chunk:
+                            raise ConnectionError("Connection closed mid-file.")
+                        file.write(chunk)
+                        remaining -= len(chunk)
 
-            # for tlv in tlvs:
-            #     size, filename = protocol.parse_filedata(tlv.get("value"))
-            #     print(size, filename)
+                        # update progress in RV
+                        entry["sent"] = entry.get("sent", 0) + len(chunk)
+                        files_rv.data[i] = entry      # update visible RV item
+                    except BlockingIOError:
+                        continue
 
+            print(f"[✓] File saved: {filename}")
 
-
-
-        # for i, entry in enumerate(files_rv.data):
-        #     filename = entry["filename"]
-        #     filesize = entry["total_size"]
-
-        #     print(f"[+] Waiting for FILEDATA TLV for: {filename}")
-
-        #     # ---- 1. Read next TLV packet from sender ----
-        #     header, tlv_type, tlv_len, value = self.recv_tlv_packet(sock)
-
-        #     if tlv_type != protocol.TLV_FILEDATA:
-        #         raise ValueError("Expected FILEDATA TLV before file data!")
-
-        #     # (value already contains filename + size again - you can ignore)
-
-        #     # ---- 2. Start receiving raw file contents ----
-        #     os.makedirs("received", exist_ok=True)
-        #     output_path = os.path.join("received", filename)
-
-        #     remaining = filesize
-        #     print(f"[+] Receiving: {filename}  ({remaining} bytes)")
-
-        #     with open(output_path, "wb") as file:
-        #         while remaining > 0:
-        #             chunk = sock.recv(min(4096, remaining))
-        #             if not chunk:
-        #                 raise ConnectionError("Connection closed mid-file.")
-        #             file.write(chunk)
-        #             remaining -= len(chunk)
-
-        #             # update progress in RV
-        #             entry["sent"] = entry.get("sent", 0) + len(chunk)
-        #             files_rv.data[i] = entry      # update visible RV item
-
-        #     print(f"[✓] File saved: {filename}")
-
-
-    @multitasking.task
-    def start_receiving(self):
-        files_rv = self.ids["files_rv"]
+        self.sender_sock.close()
+        self.receiver_sock.close()
 
     def on_receive(self, sender_sock, receiver_sock):
         self.receiver_sock = receiver_sock
