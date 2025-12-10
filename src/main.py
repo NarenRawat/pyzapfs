@@ -23,7 +23,7 @@ class ZapfsApp(MDApp):
         Clock.schedule_once(lambda _: Window.maximize(), 0)
 
         # dev
-        # Clock.schedule_once(lambda _: self.change_root_screen("receiver_find"), 0)
+        Clock.schedule_once(lambda _: self.change_root_screen("transfer_recv"), 0)
 
     def change_root_screen(self, screen_name):
         self.root.current = screen_name

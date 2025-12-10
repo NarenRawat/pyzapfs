@@ -29,8 +29,9 @@ class FileSelectionScreen(MDScreen):
         Window.bind(on_drop_file=self.on_drop_file)
         self._file_browser_open = False
 
-    def send(self):
+    def on_send_btn(self):
         files_rv = self.ids["files_rv"]
+        self.manager.current = "receiver_find"
         self.manager.current_screen.on_receive(
             {
                 x.get("filepath"): x.get("filesize")

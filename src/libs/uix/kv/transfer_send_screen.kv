@@ -1,0 +1,158 @@
+#:kivy 2.3.1
+#:import os os
+
+<TransferSendScreen>:
+    name: "transfer_send"
+    md_bg_color: self.theme_cls.backgroundColor
+
+    MDIconButton:
+        icon: "arrow-left"
+        x: dp(10)
+        top: Window.height - dp(10)
+        on_release:
+            app.change_root_screen("main")
+
+    MDScrollView:
+        do_scroll_x: False
+
+        MDBoxLayout:
+            orientation: "vertical"
+            spacing: dp(20)
+            padding: dp(20)
+            pos_hint: {"center_x": 0.5}
+
+            MDLabel:
+                text: "ZapFS"
+                bold: True
+                adaptive_height: True
+                halign: "center"
+                theme_font_size: "Custom"
+                font_size: sp(72)
+                top: self.parent.top - self.height * 0
+                text_color: self.theme_cls.onBackgroundColor
+
+            MDBoxLayout:
+                orientation: "vertical"
+                adaptive_height: True
+                pos_hint: {"center_x": 0.5}
+                size_hint_x: 0.8
+                spacing: dp(20)
+                padding: dp(20)
+                radius: dp(10)
+                md_bg_color: self.theme_cls.surfaceContainerHighColor
+
+                MDBoxLayout:
+                    adaptive_height: True
+                    MDLabel:
+                        adaptive_height: True
+                        text: "Overall Progress"
+                        font_style: "Title"
+                        pos_hint: {"center_y": 0.5}
+
+                    MDLabel:
+                        adaptive_size: True
+                        text: str((root.overall_sent / root.overall_size * 100) if root.overall_size else 0) + "%"
+                        font_style: "Title"
+                        pos_hint: {"center_y": 0.5}
+
+                MDLinearProgressIndicator:
+                    size_hint_y: None
+                    height: dp(10) + 0
+                    radius: self.height / 2
+                    value: int(root.overall_sent / root.overall_size * 100) if root.overall_size else 0
+
+            MDBoxLayout:
+                adaptive_height: True
+                size_hint_x: 0.8
+                pos_hint: {"center_x": 0.5}
+                spacing: dp(20)
+
+                MDBoxLayout:
+                    md_bg_color: self.theme_cls.surfaceContainerHighColor
+                    radius: dp(10)
+                    orientation: "vertical"
+                    padding: dp(20)
+                    spacing: dp(5)
+
+                    MDLabel:
+                        text: "Total Files"
+                        adaptive_size: True
+                        font_style: "Title"
+                        shorten: True
+                        shorten_from: "right"
+
+                    MDLabel:
+                        text: str(root.total_files)
+                        adaptive_size: True
+                        font_style: "Headline"
+                        role: "medium"
+                        bold: True
+
+                MDBoxLayout:
+                    md_bg_color: self.theme_cls.surfaceContainerHighColor
+                    radius: dp(10)
+                    orientation: "vertical"
+                    padding: dp(20)
+                    spacing: dp(5)
+
+                    MDLabel:
+                        text: "Overall Speed"
+                        adaptive_height: True
+                        font_style: "Title"
+                        shorten: True
+                        shorten_from: "right"
+
+                    MDLabel:
+                        text: root.overall_speed
+                        adaptive_size: True
+                        font_style: "Headline"
+                        role: "medium"
+                        bold: True
+
+            MDRecycleView:
+                id: files_rv
+                viewclass: "TransferSendFileItem"
+                size_hint_x: 0.8
+                pos_hint: {"center_x": 0.5}
+
+                RecycleBoxLayout:
+                    size_hint: 1, None
+                    height: self.minimum_height
+
+                    default_size: None, dp(50)
+                    default_size_hint: 1, None
+
+                    orientation: "vertical"
+                    spacing: dp(10)
+                    padding: dp(10)
+
+
+<TransferSendFileItem>:
+    adaptive_height: True
+    md_bg_color: self.theme_cls.surfaceContainerHighColor
+    padding: dp(20)
+    spacing: dp(20)
+    radius: dp(10)
+
+    MDLabel:
+        adaptive_height: True
+        text: os.path.basename(root.filename)
+        halign: "left"
+        font_style: "Title"
+        pos_hint: {"center_y": 0.5}
+        shorten: True
+
+    MDLinearProgressIndicator:
+        type: "determinate"
+        indicator_color: self.theme_cls.tertiaryColor
+        value: 0 if not root.total_size else int(100 * root.sent / root.total_size)
+        size_hint_x: 0.5
+        radius: self.height / 2
+        size_hint_y: None
+        height: dp(10)
+        pos_hint: {"center_y": 0.5}
+
+    MDLabel:
+        adaptive_size: True
+        text: str(0 if not root.total_size else int(100 * root.sent / root.total_size)) + "%"
+        pos_hint: {"center_y": 0.5}

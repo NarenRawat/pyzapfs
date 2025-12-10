@@ -4,16 +4,30 @@ MAJOR_VERSION = 1
 MINOR_VERSION = 0
 MAGIC = b"ZAPFS"
 
-DISCOVER_REQUEST = 1
-DISCOVER_RESPONSE = 2
+MSG_DISCOVER_REQUEST = 1
+MSG_DISCOVER_RESPONSE = 2
+MSG_TRANSFER = 3
 
 TLV_DISCOVER_RESPONSE_PORT = 1
 TLV_DEVICE_NAME = 2
+TLV_CONNECTION_PORT = 3
+TLV_FILEDATA = 4
+TLV_FILECHUNK = 5
+TLV_OVERALL_SIZE = 6
 
 
 _header_format = "!5sBBBL"
 _tlv_header = "!BL"
+_filedata = "!L"
 
+def create_filedata(filename, size):
+    return struct.pack(_filedata, size) + filename.encode()
+
+def parse_filedata(data):
+    header_size = struct.calcsize(_filedata)
+    size = struct.unpack(_filedata, data[:header_size])
+
+    return (size, data[header_size:].decode())
 
 def get_tlv_header_size():
     return struct.calcsize(_tlv_header)

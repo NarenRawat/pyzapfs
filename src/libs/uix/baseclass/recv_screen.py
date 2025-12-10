@@ -16,6 +16,9 @@ class RecvScreen(MDScreen):
         super(RecvScreen, self).__init__(*args, **kwargs)
         self.discover_recv_sock = None
         self.sent_to = []
+        self.transfer_sock = None
+        self.transfer_started = False
+        self.sender_sock = None
 
     def cleanup(self):
         self.searching = False
@@ -23,6 +26,7 @@ class RecvScreen(MDScreen):
 
     def on_enter(self):
         self.searching = True
+        self.transfer_started = False
 
         self.discover_recv_sock = (
             network.create_udp_broadcast_recv_socket()
@@ -30,11 +34,30 @@ class RecvScreen(MDScreen):
         self.discover_recv_sock.setblocking(False)
         self.discover_recv_sock.bind(("", 9000))
 
+        self.transfer_sock = network.create_tcp_socket("", 9500, 5)
+        self.transfer_sock.setblocking(False)
+
         Clock.schedule_interval(self.recv_request, 0)
+        Clock.schedule_interval(self.recv_transfer_request, 0)
 
     def on_leave(self):
         self.searching = False
+        self.transfer_started = True
         self.cleanup()
+
+    def recv_transfer_request(self, dt):
+        if self.transfer_started:
+            return False
+
+        try:
+            sock, (addr, port) = self.transfer_sock.accept()
+            self.sender_sock = sock
+
+            self.manager.current = "transfer_recv"
+            self.manager.current_screen.on_receive(sock, self.transfer_sock)
+
+        except BlockingIOError:
+            pass
 
     def recv_request(self, dt):
         if not self.searching:
@@ -72,7 +95,7 @@ class RecvScreen(MDScreen):
                     )
 
                     packet = protocol.build_packet(
-                        protocol.DISCOVER_RESPONSE, tlv
+                        protocol.MSG_DISCOVER_RESPONSE, tlv
                     )
 
                     client_sock.sendall(packet)

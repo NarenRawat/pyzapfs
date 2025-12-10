@@ -14,6 +14,8 @@ from kivy.uix.behaviors import ButtonBehavior
 from libs.applibs import network
 from libs.applibs import protocol
 
+from queue import Queue
+
 
 class ReceiverItem(
     RectangularRippleBehavior, ButtonBehavior, MDBoxLayout
@@ -21,6 +23,7 @@ class ReceiverItem(
     index = None
     device_name = StringProperty("")
     ip = StringProperty("")
+    callback = ObjectProperty(lambda x: x)
 
 
 class ReceiverFindScreen(MDScreen):
@@ -34,6 +37,7 @@ class ReceiverFindScreen(MDScreen):
         self.broadcast_socket = None
         self.discover_reponse_sock = None
         self.discover_packet = None
+        self.filesdata = {}
 
     def cleanup(self):
         self.searching = False
@@ -46,8 +50,6 @@ class ReceiverFindScreen(MDScreen):
 
         try:
             sock, (addr, port) = self.discover_reponse_sock.accept()
-            # recv_sock = network.create_tcp_socket(addr, port)
-            # recv_sock.connect((addr, port))
             data = sock.recv(1024)
             total_data = data
 
@@ -55,25 +57,26 @@ class ReceiverFindScreen(MDScreen):
                 data = sock.recv(1024)
                 total_data += data
 
-            print(f"{total_data=}")
             header_size, *_, length = protocol.parse_packet(total_data)
 
             tlvs = protocol.parse_tlvs(
                 total_data[header_size : header_size + length]
             )
-            print(tlvs)
             for tlv in tlvs:
-                print(tlv)
                 if tlv.get("type") == protocol.TLV_DEVICE_NAME:
                     r_data = {
                         "device_name": tlv.get("value").decode(),
                         "ip": addr,
+                        "callback": self.try_connect_server
                     }
-                    print(r_data)
                     self.receivers.append(r_data)
 
         except BlockingIOError:
             pass
+
+    def try_connect_server(self, server_ip):
+        self.manager.current = "transfer_send"
+        self.manager.current_screen.on_receive(server_ip, self.filesdata)
 
     def on_enter(self):
         self.searching = True
@@ -89,7 +92,7 @@ class ReceiverFindScreen(MDScreen):
         port = str(port).encode()
 
         self.discover_packet = protocol.build_packet(
-            protocol.DISCOVER_REQUEST,
+            protocol.MSG_DISCOVER_REQUEST,
             protocol.create_tlv(
                 protocol.TLV_DISCOVER_RESPONSE_PORT, len(port), port
             ),
@@ -118,5 +121,4 @@ class ReceiverFindScreen(MDScreen):
         self.searching = False
 
     def on_receive(self, filesdata):
-        pass
-        # print(filesdata)
+        self.filesdata = filesdata
