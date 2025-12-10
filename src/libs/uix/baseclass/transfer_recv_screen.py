@@ -2,10 +2,11 @@ from kivymd.uix.screen import MDScreen
 from kivy.clock import Clock
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.properties import StringProperty, NumericProperty
-from libs.applibs import network, protocol
+from libs.applibs import network, protocol, utils
 import struct
 import multitasking
 import os
+import time
 
 
 class TransferRecvFileItem(MDBoxLayout):
@@ -16,7 +17,7 @@ class TransferRecvFileItem(MDBoxLayout):
 
 class TransferRecvScreen(MDScreen):
     total_files = NumericProperty(0)
-    overall_speed = StringProperty("30 MB/s")
+    overall_speed = StringProperty("0 KB/s")
     overall_size = NumericProperty(0)
     overall_sent = NumericProperty(0)
 
@@ -24,9 +25,26 @@ class TransferRecvScreen(MDScreen):
         super(TransferRecvScreen, self).__init__(*args, **kwargs)
         self.receiver_sock = None
         self.sender_sock = None
+        self.start_time = 0
+        self.speed_update_event = None
+
+    def update_recv_progress(self, sent, i, entry):
+        self.overall_sent += sent
+        entry["sent"] += sent
+        files_rv = self.ids["files_rv"]
+        files_rv.data[i] = entry
+
+    def update_speed(self, dt):
+        elapsed = time.time() - self.start_time
+        if elapsed > 0:
+            speed = self.overall_sent / elapsed
+            self.overall_speed = utils.hr_size(speed) + "/s"
 
     @multitasking.task
     def start_receiving(self):
+        self.start_time = time.time()
+        self.speed_update_event = Clock.schedule_interval(self.update_speed, 1)
+
         files_rv = self.ids["files_rv"]
         os.makedirs("received", exist_ok=True)
 
@@ -49,13 +67,14 @@ class TransferRecvScreen(MDScreen):
                         remaining -= len(chunk)
 
                         # update progress in RV
-                        entry["sent"] = entry.get("sent", 0) + len(chunk)
-                        files_rv.data[i] = entry      # update visible RV item
+                        Clock.schedule_once(lambda dt: self.update_recv_progress(len(chunk), i, entry), 0)
                     except BlockingIOError:
                         continue
 
             print(f"[✓] File saved: {filename}")
 
+        if self.speed_update_event:
+            self.speed_update_event.cancel()
         self.sender_sock.close()
         self.receiver_sock.close()
 
@@ -88,7 +107,7 @@ class TransferRecvScreen(MDScreen):
                     tlv.get("value")
                 )
                 self.ids["files_rv"].data.append(
-                    {"filename": filename, "total_size": size}
+                    {"filename": filename, "total_size": size, "sent": 0}
                 )
                 self.total_files += 1
 

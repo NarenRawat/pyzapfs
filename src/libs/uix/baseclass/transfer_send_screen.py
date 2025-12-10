@@ -2,10 +2,11 @@ from kivymd.uix.screen import MDScreen
 from kivy.clock import Clock
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivy.properties import StringProperty, NumericProperty
-from libs.applibs import network, protocol
+from libs.applibs import network, protocol, utils
 import struct
 import os
 import multitasking
+import time
 
 
 class TransferSendFileItem(MDBoxLayout):
@@ -25,34 +26,47 @@ class TransferSendScreen(MDScreen):
         self.server_ip = ""
         self.filedata = None
         self.transfer_sock = None
+        self.start_time = 0
+        self.speed_update_event = None
 
+
+    def update_progress(self, sent, i, v):
+        self.overall_sent += sent
+        v["sent"] += sent
+        files_rv = self.ids["files_rv"]
+        files_rv.data.pop(i)
+        files_rv.data.insert(i, v)
+
+    def update_speed(self, dt):
+        elapsed = time.time() - self.start_time
+        if elapsed > 0:
+            speed = self.overall_sent / elapsed
+            self.overall_speed = utils.hr_size(speed) + "/s"
 
     @multitasking.task
     def start_sending(self):
+        self.start_time = time.time()
+        self.speed_update_event = Clock.schedule_interval(self.update_speed, 1)
+
         files_rv = self.ids["files_rv"]
         self.transfer_sock.setblocking(False)
 
         for i, v in enumerate(files_rv.data):
             with open(v.get("filename"), "rb") as file:
                 byte_read = file.read(1024)
-                self.overall_sent += len(byte_read)
-
-                v["sent"] = v.get("sent") + len(byte_read)
-
-                files_rv.data.pop(i)
-                files_rv.data.insert(i, v)
+                Clock.schedule_once(lambda dt: self.update_progress(len(byte_read), i, v), 0)
 
                 while len(byte_read) > 0:
                     try:
                         self.transfer_sock.sendall(byte_read)
                         byte_read = file.read(1024)
-                        self.overall_sent += len(byte_read)
-                        v["sent"] = v.get("sent") + len(byte_read)
-                        files_rv.data.pop(i)
-                        files_rv.data.insert(i, v)
+                        if len(byte_read) > 0:
+                            Clock.schedule_once(lambda dt: self.update_progress(len(byte_read), i, v), 0)
                     except BlockingIOError as e:
                         continue
 
+        if self.speed_update_event:
+            self.speed_update_event.cancel()
         self.transfer_sock.close()
 
 
