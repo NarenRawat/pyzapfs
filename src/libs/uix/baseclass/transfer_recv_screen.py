@@ -63,15 +63,30 @@ class TransferRecvScreen(MDScreen):
                         chunk = self.sender_sock.recv(min(4096, remaining))
                         if not chunk:
                             raise ConnectionError("Connection closed mid-file.")
+
                         file.write(chunk)
                         remaining -= len(chunk)
 
-                        # update progress in RV
-                        Clock.schedule_once(lambda dt: self.update_recv_progress(len(chunk), i, entry), 0)
+                        sent_now = len(chunk)
+
+                        # correct lambda capturing
+                        Clock.schedule_once(
+                            lambda dt, sent=sent_now, index=i, item=entry:
+                                self.update_recv_progress(sent, index, item),
+                            0
+                        )
+
                     except BlockingIOError:
                         continue
 
-            print(f"[✓] File saved: {filename}")
+            # sync to ensure 100%
+            Clock.schedule_once(
+                lambda dt, index=i, item=entry:
+                    self.update_recv_progress(0, index, item),
+                0
+            )
+
+            print(f"[✔] File saved: {filename}")
 
         if self.speed_update_event:
             self.speed_update_event.cancel()
@@ -99,20 +114,13 @@ class TransferRecvScreen(MDScreen):
 
         for tlv in tlvs:
             if tlv.get("type") == protocol.TLV_OVERALL_SIZE:
-                self.overall_size = struct.unpack(
-                    "!Q", tlv.get("value")
-                )[0]
+                self.overall_size = struct.unpack("!Q", tlv.get("value"))[0]
+
             elif tlv.get("type") == protocol.TLV_FILEDATA:
-                size, filename = protocol.parse_filedata(
-                    tlv.get("value")
-                )
+                size, filename = protocol.parse_filedata(tlv.get("value"))
                 self.ids["files_rv"].data.append(
                     {"filename": filename, "total_size": size, "sent": 0}
                 )
                 self.total_files += 1
 
         Clock.schedule_once(lambda x: self.start_receiving(), 5)
-
-        # self.sender_sock.close()
-        # self.receiver_sock.close()
-

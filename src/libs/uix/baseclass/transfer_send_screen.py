@@ -29,7 +29,6 @@ class TransferSendScreen(MDScreen):
         self.start_time = 0
         self.speed_update_event = None
 
-
     def update_progress(self, sent, i, v):
         self.overall_sent += sent
         v["sent"] += sent
@@ -46,30 +45,48 @@ class TransferSendScreen(MDScreen):
     @multitasking.task
     def start_sending(self):
         self.start_time = time.time()
-        self.speed_update_event = Clock.schedule_interval(self.update_speed, 1)
+        self.speed_update_event = Clock.schedule_interval(
+            self.update_speed, 1
+        )
 
         files_rv = self.ids["files_rv"]
         self.transfer_sock.setblocking(False)
 
         for i, v in enumerate(files_rv.data):
             with open(v.get("filename"), "rb") as file:
+
                 byte_read = file.read(1024)
-                Clock.schedule_once(lambda dt: self.update_progress(len(byte_read), i, v), 0)
 
                 while len(byte_read) > 0:
                     try:
+                        # send chunk
                         self.transfer_sock.sendall(byte_read)
+
+                        sent_now = len(byte_read)
+
+                        # correct lambda capturing (fixes progress stuck < 100)
+                        Clock.schedule_once(
+                            lambda dt, sent=sent_now, index=i, item=v:
+                                self.update_progress(sent, index, item),
+                            0
+                        )
+
+                        # next chunk
                         byte_read = file.read(1024)
-                        if len(byte_read) > 0:
-                            Clock.schedule_once(lambda dt: self.update_progress(len(byte_read), i, v), 0)
-                    except BlockingIOError as e:
+
+                    except BlockingIOError:
                         continue
+
+            # force a final UI sync so the bar hits exactly 100%
+            Clock.schedule_once(
+                lambda dt, index=i, item=v:
+                    self.update_progress(0, index, item),
+                0
+            )
 
         if self.speed_update_event:
             self.speed_update_event.cancel()
         self.transfer_sock.close()
-
-
 
     def on_receive(self, server_ip, data):
         self.server_ip = server_ip
@@ -85,9 +102,13 @@ class TransferSendScreen(MDScreen):
             self.overall_size += size
             self.total_files += 1
 
-            filedata = protocol.create_filedata(os.path.basename(file), size)
+            filedata = protocol.create_filedata(
+                os.path.basename(file), size
+            )
 
-            to_send += protocol.create_tlv(protocol.TLV_FILEDATA, len(filedata), filedata)
+            to_send += protocol.create_tlv(
+                protocol.TLV_FILEDATA, len(filedata), filedata
+            )
 
         byte_overall_size = struct.pack("!Q", self.overall_size)
         to_send += protocol.create_tlv(
@@ -106,5 +127,3 @@ class TransferSendScreen(MDScreen):
         self.transfer_sock.sendall(b"")
 
         Clock.schedule_once(lambda x: self.start_sending(), 5)
-
-        # self.transfer_sock.close()
